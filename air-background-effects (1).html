@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Air background effects — demo</title>
+<style>
+  :root {
+    --ink: #1c1f1a;
+    --paper: #f4f2ec;
+    --accent: #4a7c59;
+    --muted: #6b6f63;
+    --line: rgba(28,31,26,0.12);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: var(--paper);
+    color: var(--ink);
+  }
+  header {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 40px 24px 16px;
+  }
+  h1 { font-size: 24px; margin: 0 0 6px; }
+  p.lede { color: var(--muted); margin: 0; font-size: 15px; line-height: 1.5; }
+
+  .tabs {
+    max-width: 900px;
+    margin: 24px auto 0;
+    padding: 0 24px;
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .tab {
+    border: 1px solid var(--line);
+    background: #fff;
+    padding: 8px 14px;
+    border-radius: 999px;
+    font-size: 13px;
+    cursor: pointer;
+    color: var(--muted);
+  }
+  .tab.active {
+    background: var(--ink);
+    color: #fff;
+    border-color: var(--ink);
+  }
+
+  .stage-wrap {
+    max-width: 900px;
+    margin: 16px auto 0;
+    padding: 0 24px;
+  }
+  .stage {
+    position: relative;
+    height: 380px;
+    border-radius: 14px;
+    overflow: hidden;
+    background: linear-gradient(180deg, #dfe9df 0%, #eef2ea 100%);
+    border: 1px solid var(--line);
+  }
+  .stage-content {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    z-index: 5;
+    pointer-events: none;
+  }
+  .stage-content h2 {
+    margin: 0 0 8px;
+    font-size: 28px;
+    font-weight: 600;
+    color: var(--ink);
+  }
+  .stage-content span {
+    font-size: 13px;
+    color: var(--muted);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+  .panel { display: none; height: 100%; }
+  .panel.active { display: block; }
+
+  pre {
+    max-width: 900px;
+    margin: 16px auto 40px;
+    padding: 16px 24px 16px;
+    background: #1c1f1a;
+    color: #eef2ea;
+    border-radius: 10px;
+    overflow-x: auto;
+    font-size: 12.5px;
+    line-height: 1.6;
+  }
+  .code-wrap { max-width: 900px; margin: 0 auto; padding: 0 24px; }
+  .code-wrap p { font-size: 13px; color: var(--muted); margin: 20px 0 0; }
+  code { font-family: "SF Mono", Menlo, monospace; }
+
+  /* ---------- Effect 1: floating dust particles ---------- */
+  .particles { position: absolute; inset: 0; overflow: hidden; }
+  .particle {
+    position: absolute;
+    bottom: -20px;
+    width: 6px;
+    height: 6px;
+    background: rgba(74,124,89,0.35);
+    border-radius: 50%;
+    animation: floatUp linear infinite;
+  }
+  @keyframes floatUp {
+    0%   { transform: translateY(0) translateX(0); opacity: 0; }
+    10%  { opacity: 1; }
+    90%  { opacity: 1; }
+    100% { transform: translateY(-420px) translateX(var(--drift, 30px)); opacity: 0; }
+  }
+
+  /* ---------- Effect 2: wind streaks ---------- */
+  .streaks { position: absolute; inset: 0; overflow: hidden; }
+  .streak {
+    position: absolute;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(28,31,26,0.25), transparent);
+    animation: windBlow linear infinite;
+  }
+  @keyframes windBlow {
+    0%   { transform: translateX(-120%); opacity: 0; }
+    15%  { opacity: 1; }
+    85%  { opacity: 1; }
+    100% { transform: translateX(120%); opacity: 0; }
+  }
+
+  /* ---------- Effect 3: soft bubbles ---------- */
+  .bubbles { position: absolute; inset: 0; overflow: hidden; }
+  .bubble {
+    position: absolute;
+    bottom: -60px;
+    border-radius: 50%;
+    border: 1px solid rgba(74,124,89,0.4);
+    background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.5), rgba(74,124,89,0.05));
+    animation: bubbleRise linear infinite;
+  }
+  @keyframes bubbleRise {
+    0%   { transform: translateY(0) translateX(0); opacity: 0; }
+    10%  { opacity: 0.9; }
+    90%  { opacity: 0.9; }
+    100% { transform: translateY(-460px) translateX(var(--sway, 20px)); opacity: 0; }
+  }
+
+  /* ---------- Effect 4: drifting mist blobs (canvas) ---------- */
+  #mistCanvas { position: absolute; inset: 0; }
+
+  /* ---------- Effect 5: falling leaves ---------- */
+  .leaves { position: absolute; inset: 0; overflow: hidden; }
+  .leaf {
+    position: absolute;
+    top: -30px;
+    background: var(--accent);
+    border-radius: 0 60% 0 60%;
+    opacity: 0.55;
+    animation: leafFall linear infinite;
+  }
+  @keyframes leafFall {
+    0%   { transform: translateY(0) translateX(0) rotate(0deg); }
+    50%  { transform: translateY(210px) translateX(var(--sway, 25px)) rotate(180deg); }
+    100% { transform: translateY(430px) translateX(0) rotate(360deg); }
+  }
+
+  /* ---------- Effect 6: wind waves (SVG ribbon) ---------- */
+  .waves { position: absolute; inset: 0; overflow: hidden; }
+  .wave-line {
+    position: absolute;
+    left: -10%;
+    width: 120%;
+    height: 40px;
+    opacity: 0.3;
+    animation: waveDrift ease-in-out infinite;
+  }
+  @keyframes waveDrift {
+    0%, 100% { transform: translateX(0) translateY(0); }
+    50%      { transform: translateX(3%) translateY(-8px); }
+  }
+
+  /* ---------- Effect 7: fireflies ---------- */
+  .fireflies { position: absolute; inset: 0; overflow: hidden; }
+  .firefly {
+    position: absolute;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: #f2c14e;
+    box-shadow: 0 0 8px 2px rgba(242,193,78,0.7);
+    animation: fireflyMove ease-in-out infinite, fireflyGlow ease-in-out infinite;
+  }
+  @keyframes fireflyMove {
+    0%   { transform: translate(0, 0); }
+    25%  { transform: translate(30px, -20px); }
+    50%  { transform: translate(-10px, -40px); }
+    75%  { transform: translate(-30px, -10px); }
+    100% { transform: translate(0, 0); }
+  }
+  @keyframes fireflyGlow {
+    0%, 100% { opacity: 0.2; }
+    50%      { opacity: 1; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Air background effects</h1>
+  <p class="lede">Four lightweight options for an "air" feel behind your hero or full page: floating dust, wind streaks, rising bubbles, and drifting mist. Pick a tab to preview, then copy the CSS/JS beneath it into your site.</p>
+</header>
+
+<div class="tabs">
+  <button class="tab active" data-target="p1">Floating dust</button>
+  <button class="tab" data-target="p2">Wind streaks</button>
+  <button class="tab" data-target="p3">Rising bubbles</button>
+  <button class="tab" data-target="p4">Drifting mist</button>
+  <button class="tab" data-target="p5">Falling leaves</button>
+  <button class="tab" data-target="p6">Wind waves</button>
+  <button class="tab" data-target="p7">Fireflies</button>
+</div>
+
+<div class="stage-wrap">
+  <div class="stage">
+    <div class="panel active" id="p1"><div class="particles" id="particlesLayer"></div></div>
+    <div class="panel" id="p2"><div class="streaks" id="streaksLayer"></div></div>
+    <div class="panel" id="p3"><div class="bubbles" id="bubblesLayer"></div></div>
+    <div class="panel" id="p4"><canvas id="mistCanvas"></canvas></div>
+    <div class="panel" id="p5"><div class="leaves" id="leavesLayer"></div></div>
+    <div class="panel" id="p6"><div class="waves" id="wavesLayer"></div></div>
+    <div class="panel" id="p7"><div class="fireflies" id="firefliesLayer"></div></div>
+    <div class="stage-content">
+      <span>Your hero content</span>
+      <h2>Breathe easy</h2>
+    </div>
+  </div>
+</div>
+
+<div class="code-wrap">
+  <p id="codeLabel">CSS for floating dust — put a container behind your hero content with <code>position: relative</code>, and drop in the markup + CSS below.</p>
+</div>
+<pre id="codeBlock"></pre>
+
+<script>
+const codeSamples = {
+  p1: `/* HTML: one empty div behind your content */
+<div class="particles" id="particles"></div>
+
+/* CSS */
+.particles { position:absolute; inset:0; overflow:hidden; pointer-events:none; }
+.particle {
+  position:absolute; bottom:-20px; width:6px; height:6px;
+  background:rgba(74,124,89,0.35); border-radius:50%;
+  animation: floatUp linear infinite;
+}
+@keyframes floatUp {
+  0%   { transform:translateY(0) translateX(0); opacity:0; }
+  10%  { opacity:1; }
+  90%  { opacity:1; }
+  100% { transform:translateY(-420px) translateX(var(--drift,30px)); opacity:0; }
+}
+
+/* JS: spawn ~30 particles with randomised size, speed, position */
+const layer = document.getElementById('particles');
+for (let i = 0; i < 30; i++) {
+  const p = document.createElement('div');
+  p.className = 'particle';
+  const size = 3 + Math.random() * 5;
+  p.style.width = p.style.height = size + 'px';
+  p.style.left = Math.random() * 100 + '%';
+  p.style.setProperty('--drift', (Math.random() * 60 - 30) + 'px');
+  p.style.animationDuration = (8 + Math.random() * 10) + 's';
+  p.style.animationDelay = (Math.random() * 10) + 's';
+  layer.appendChild(p);
+}`,
+  p2: `/* HTML */
+<div class="streaks" id="streaks"></div>
+
+/* CSS */
+.streaks { position:absolute; inset:0; overflow:hidden; pointer-events:none; }
+.streak {
+  position:absolute; height:1px;
+  background:linear-gradient(90deg, transparent, rgba(28,31,26,0.25), transparent);
+  animation: windBlow linear infinite;
+}
+@keyframes windBlow {
+  0%   { transform:translateX(-120%); opacity:0; }
+  15%  { opacity:1; }
+  85%  { opacity:1; }
+  100% { transform:translateX(120%); opacity:0; }
+}
+
+/* JS */
+const layer = document.getElementById('streaks');
+for (let i = 0; i < 14; i++) {
+  const s = document.createElement('div');
+  s.className = 'streak';
+  s.style.top = Math.random() * 100 + '%';
+  s.style.width = (60 + Math.random() * 140) + 'px';
+  s.style.animationDuration = (3 + Math.random() * 4) + 's';
+  s.style.animationDelay = (Math.random() * 5) + 's';
+  layer.appendChild(s);
+}`,
+  p3: `/* HTML */
+<div class="bubbles" id="bubbles"></div>
+
+/* CSS */
+.bubbles { position:absolute; inset:0; overflow:hidden; pointer-events:none; }
+.bubble {
+  position:absolute; bottom:-60px; border-radius:50%;
+  border:1px solid rgba(74,124,89,0.4);
+  background:radial-gradient(circle at 30% 30%, rgba(255,255,255,0.5), rgba(74,124,89,0.05));
+  animation: bubbleRise linear infinite;
+}
+@keyframes bubbleRise {
+  0%   { transform:translateY(0) translateX(0); opacity:0; }
+  10%  { opacity:0.9; }
+  90%  { opacity:0.9; }
+  100% { transform:translateY(-460px) translateX(var(--sway,20px)); opacity:0; }
+}
+
+/* JS */
+const layer = document.getElementById('bubbles');
+for (let i = 0; i < 18; i++) {
+  const b = document.createElement('div');
+  b.className = 'bubble';
+  const size = 10 + Math.random() * 30;
+  b.style.width = b.style.height = size + 'px';
+  b.style.left = Math.random() * 100 + '%';
+  b.style.setProperty('--sway', (Math.random() * 40 - 20) + 'px');
+  b.style.animationDuration = (10 + Math.random() * 12) + 's';
+  b.style.animationDelay = (Math.random() * 12) + 's';
+  layer.appendChild(b);
+}`,
+  p4: `/* HTML */
+<canvas id="mistCanvas"></canvas>
+
+/* CSS */
+#mistCanvas { position:absolute; inset:0; pointer-events:none; }
+
+/* JS: soft blurred blobs drifting slowly across the canvas */
+const canvas = document.getElementById('mistCanvas');
+const ctx = canvas.getContext('2d');
+function resize() {
+  canvas.width = canvas.clientWidth;
+  canvas.height = canvas.clientHeight;
+}
+resize();
+window.addEventListener('resize', resize);
+
+const blobs = Array.from({ length: 6 }, () => ({
+  x: Math.random(),
+  y: Math.random(),
+  r: 80 + Math.random() * 120,
+  vx: (Math.random() - 0.5) * 0.0003,
+  vy: (Math.random() - 0.5) * 0.0002,
+}));
+
+function draw() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  blobs.forEach(b => {
+    b.x += b.vx; b.y += b.vy;
+    if (b.x < -0.2) b.x = 1.2; if (b.x > 1.2) b.x = -0.2;
+    if (b.y < -0.2) b.y = 1.2; if (b.y > 1.2) b.y = -0.2;
+    const px = b.x * canvas.width, py = b.y * canvas.height;
+    const grad = ctx.createRadialGradient(px, py, 0, px, py, b.r);
+    grad.addColorStop(0, 'rgba(255,255,255,0.25)');
+    grad.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(px, py, b.r, 0, Math.PI * 2);
+    ctx.fill();
+  });
+  requestAnimationFrame(draw);
+}
+draw();`,
+  p5: `/* HTML */
+<div class="leaves" id="leaves"></div>
+
+/* CSS */
+.leaves { position:absolute; inset:0; overflow:hidden; pointer-events:none; }
+.leaf {
+  position:absolute; top:-30px;
+  background:#4a7c59; border-radius:0 60% 0 60%;
+  opacity:0.55; animation: leafFall linear infinite;
+}
+@keyframes leafFall {
+  0%   { transform:translateY(0) translateX(0) rotate(0deg); }
+  50%  { transform:translateY(210px) translateX(var(--sway,25px)) rotate(180deg); }
+  100% { transform:translateY(430px) translateX(0) rotate(360deg); }
+}
+
+/* JS */
+const layer = document.getElementById('leaves');
+for (let i = 0; i < 16; i++) {
+  const l = document.createElement('div');
+  l.className = 'leaf';
+  const size = 8 + Math.random() * 8;
+  l.style.width = size + 'px';
+  l.style.height = (size * 0.7) + 'px';
+  l.style.left = Math.random() * 100 + '%';
+  l.style.setProperty('--sway', (Math.random() * 60 - 30) + 'px');
+  l.style.animationDuration = (6 + Math.random() * 6) + 's';
+  l.style.animationDelay = (Math.random() * 8) + 's';
+  layer.appendChild(l);
+}`,
+  p6: `/* HTML */
+<div class="waves" id="waves"></div>
+
+/* CSS */
+.waves { position:absolute; inset:0; overflow:hidden; pointer-events:none; }
+.wave-line {
+  position:absolute; left:-10%; width:120%; height:40px;
+  opacity:0.3; animation: waveDrift ease-in-out infinite;
+}
+@keyframes waveDrift {
+  0%, 100% { transform:translateX(0) translateY(0); }
+  50%      { transform:translateX(3%) translateY(-8px); }
+}
+
+/* JS: each line is a thin SVG ribbon, stacked at different heights */
+const layer = document.getElementById('waves');
+const svgNS = 'http://www.w3.org/2000/svg';
+for (let i = 0; i < 5; i++) {
+  const wrap = document.createElement('div');
+  wrap.className = 'wave-line';
+  wrap.style.top = (15 + i * 18) + '%';
+  wrap.style.animationDuration = (5 + i) + 's';
+  wrap.style.animationDelay = (i * 0.6) + 's';
+
+  const svg = document.createElementNS(svgNS, 'svg');
+  svg.setAttribute('viewBox', '0 0 1200 40');
+  svg.setAttribute('preserveAspectRatio', 'none');
+  svg.style.width = '100%';
+  svg.style.height = '100%';
+
+  const path = document.createElementNS(svgNS, 'path');
+  path.setAttribute('d', 'M0,20 Q150,0 300,20 T600,20 T900,20 T1200,20');
+  path.setAttribute('stroke', '#1c1f1a');
+  path.setAttribute('stroke-width', '1');
+  path.setAttribute('fill', 'none');
+  svg.appendChild(path);
+  wrap.appendChild(svg);
+  layer.appendChild(wrap);
+}`,
+  p7: `/* HTML */
+<div class="fireflies" id="fireflies"></div>
+
+/* CSS */
+.fireflies { position:absolute; inset:0; overflow:hidden; pointer-events:none; }
+.firefly {
+  position:absolute; width:5px; height:5px; border-radius:50%;
+  background:#f2c14e; box-shadow:0 0 8px 2px rgba(242,193,78,0.7);
+  animation: fireflyMove ease-in-out infinite, fireflyGlow ease-in-out infinite;
+}
+@keyframes fireflyMove {
+  0%   { transform:translate(0,0); }
+  25%  { transform:translate(30px,-20px); }
+  50%  { transform:translate(-10px,-40px); }
+  75%  { transform:translate(-30px,-10px); }
+  100% { transform:translate(0,0); }
+}
+@keyframes fireflyGlow {
+  0%, 100% { opacity:0.2; }
+  50%      { opacity:1; }
+}
+
+/* JS */
+const layer = document.getElementById('fireflies');
+for (let i = 0; i < 22; i++) {
+  const f = document.createElement('div');
+  f.className = 'firefly';
+  f.style.left = Math.random() * 100 + '%';
+  f.style.top = Math.random() * 100 + '%';
+  f.style.animationDuration = (4 + Math.random() * 4) + 's, ' + (1.5 + Math.random() * 2) + 's';
+  f.style.animationDelay = (Math.random() * 5) + 's';
+  layer.appendChild(f);
+}`
+};
+
+const codeLabels = {
+  p1: 'CSS + JS for floating dust — small dots drifting upward with a gentle horizontal sway. Good for a calm, ambient hero.',
+  p2: 'CSS + JS for wind streaks — thin lines sweeping horizontally, evoking a breeze passing through.',
+  p3: 'CSS + JS for rising bubbles — soft translucent circles floating up, works nicely with a light or nature-themed palette.',
+  p4: 'JS (canvas) for drifting mist — large soft blurred blobs moving slowly, best for a moody full-page atmosphere.',
+  p5: 'CSS + JS for falling leaves — small tumbling shapes with rotation, reads as an autumn breeze.',
+  p6: 'CSS + JS (inline SVG) for wind waves — thin ribbon lines gently undulating, like visible airflow.',
+  p7: 'CSS + JS for fireflies — small glowing dots wandering and pulsing, good for a dusk/night atmosphere.'
+};
+
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    tab.classList.add('active');
+    const target = tab.dataset.target;
+    document.getElementById(target).classList.add('active');
+    document.getElementById('codeBlock').textContent = codeSamples[target];
+    document.getElementById('codeLabel').textContent = codeLabels[target];
+  });
+});
+
+// init code block
+document.getElementById('codeBlock').textContent = codeSamples.p1;
+
+// Effect 1: particles
+(function () {
+  const layer = document.getElementById('particlesLayer');
+  for (let i = 0; i < 30; i++) {
+    const p = document.createElement('div');
+    p.className = 'particle';
+    const size = 3 + Math.random() * 5;
+    p.style.width = p.style.height = size + 'px';
+    p.style.left = Math.random() * 100 + '%';
+    p.style.setProperty('--drift', (Math.random() * 60 - 30) + 'px');
+    p.style.animationDuration = (8 + Math.random() * 10) + 's';
+    p.style.animationDelay = (Math.random() * 10) + 's';
+    layer.appendChild(p);
+  }
+})();
+
+// Effect 2: streaks
+(function () {
+  const layer = document.getElementById('streaksLayer');
+  for (let i = 0; i < 14; i++) {
+    const s = document.createElement('div');
+    s.className = 'streak';
+    s.style.top = Math.random() * 100 + '%';
+    s.style.width = (60 + Math.random() * 140) + 'px';
+    s.style.animationDuration = (3 + Math.random() * 4) + 's';
+    s.style.animationDelay = (Math.random() * 5) + 's';
+    layer.appendChild(s);
+  }
+})();
+
+// Effect 3: bubbles
+(function () {
+  const layer = document.getElementById('bubblesLayer');
+  for (let i = 0; i < 18; i++) {
+    const b = document.createElement('div');
+    b.className = 'bubble';
+    const size = 10 + Math.random() * 30;
+    b.style.width = b.style.height = size + 'px';
+    b.style.left = Math.random() * 100 + '%';
+    b.style.setProperty('--sway', (Math.random() * 40 - 20) + 'px');
+    b.style.animationDuration = (10 + Math.random() * 12) + 's';
+    b.style.animationDelay = (Math.random() * 12) + 's';
+    layer.appendChild(b);
+  }
+})();
+
+// Effect 5: leaves
+(function () {
+  const layer = document.getElementById('leavesLayer');
+  for (let i = 0; i < 16; i++) {
+    const l = document.createElement('div');
+    l.className = 'leaf';
+    const size = 8 + Math.random() * 8;
+    l.style.width = size + 'px';
+    l.style.height = (size * 0.7) + 'px';
+    l.style.left = Math.random() * 100 + '%';
+    l.style.setProperty('--sway', (Math.random() * 60 - 30) + 'px');
+    l.style.animationDuration = (6 + Math.random() * 6) + 's';
+    l.style.animationDelay = (Math.random() * 8) + 's';
+    layer.appendChild(l);
+  }
+})();
+
+// Effect 6: wind waves
+(function () {
+  const layer = document.getElementById('wavesLayer');
+  const svgNS = 'http://www.w3.org/2000/svg';
+  for (let i = 0; i < 5; i++) {
+    const wrap = document.createElement('div');
+    wrap.className = 'wave-line';
+    wrap.style.top = (15 + i * 18) + '%';
+    wrap.style.animationDuration = (5 + i) + 's';
+    wrap.style.animationDelay = (i * 0.6) + 's';
+
+    const svg = document.createElementNS(svgNS, 'svg');
+    svg.setAttribute('viewBox', '0 0 1200 40');
+    svg.setAttribute('preserveAspectRatio', 'none');
+    svg.style.width = '100%';
+    svg.style.height = '100%';
+
+    const path = document.createElementNS(svgNS, 'path');
+    path.setAttribute('d', 'M0,20 Q150,0 300,20 T600,20 T900,20 T1200,20');
+    path.setAttribute('stroke', '#1c1f1a');
+    path.setAttribute('stroke-width', '1');
+    path.setAttribute('fill', 'none');
+    svg.appendChild(path);
+    wrap.appendChild(svg);
+    layer.appendChild(wrap);
+  }
+})();
+
+// Effect 7: fireflies
+(function () {
+  const layer = document.getElementById('firefliesLayer');
+  for (let i = 0; i < 22; i++) {
+    const f = document.createElement('div');
+    f.className = 'firefly';
+    f.style.left = Math.random() * 100 + '%';
+    f.style.top = Math.random() * 100 + '%';
+    f.style.animationDuration = (4 + Math.random() * 4) + 's, ' + (1.5 + Math.random() * 2) + 's';
+    f.style.animationDelay = (Math.random() * 5) + 's';
+    layer.appendChild(f);
+  }
+})();
+
+// Effect 4: mist canvas
+(function () {
+  const canvas = document.getElementById('mistCanvas');
+  const ctx = canvas.getContext('2d');
+  function resize() {
+    canvas.width = canvas.clientWidth;
+    canvas.height = canvas.clientHeight;
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  const blobs = Array.from({ length: 6 }, () => ({
+    x: Math.random(),
+    y: Math.random(),
+    r: 80 + Math.random() * 120,
+    vx: (Math.random() - 0.5) * 0.0003,
+    vy: (Math.random() - 0.5) * 0.0002,
+  }));
+
+  function draw() {
+    if (document.getElementById('p4').classList.contains('active')) {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      blobs.forEach(b => {
+        b.x += b.vx; b.y += b.vy;
+        if (b.x < -0.2) b.x = 1.2; if (b.x > 1.2) b.x = -0.2;
+        if (b.y < -0.2) b.y = 1.2; if (b.y > 1.2) b.y = -0.2;
+        const px = b.x * canvas.width, py = b.y * canvas.height;
+        const grad = ctx.createRadialGradient(px, py, 0, px, py, b.r);
+        grad.addColorStop(0, 'rgba(255,255,255,0.35)');
+        grad.addColorStop(1, 'rgba(255,255,255,0)');
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(px, py, b.r, 0, Math.PI * 2);
+        ctx.fill();
+      });
+    }
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+</script>
+</body>
+</html>
